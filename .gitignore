@@ -317,3 +317,8 @@ http-client.private.env.json
 
 # Exclude logs directory
 logs/*
+data/*
+
+.env
+.ipynb_checkpoints/
+__pycache__/
