@@ -236,3 +236,7 @@ You still need to customize `src/app.py` with your project content.
 - Keep the function names and signatures in `src/data.py`, `src/metrics.py`, and `src/app.py` unchanged.
 - Save your trained models before running the template.
 - Use the same evaluation logic for all registered models so the comparison remains fair.
+
+
+pip install -r requirement.txt
+pip freeze >requirement.txt
