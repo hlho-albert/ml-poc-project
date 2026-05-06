@@ -1,0 +1,66 @@
+{
+  "created_at": "20260506_150158",
+  "dataset_path": "..\\data\\processed\\idealista_model_ready_latest.csv",
+  "dataset_shape": [
+    489,
+    35
+  ],
+  "target_col": "price",
+  "numeric_features": [
+    "size",
+    "rooms",
+    "bathrooms",
+    "latitude",
+    "longitude",
+    "distance",
+    "numPhotos",
+    "floor_numeric",
+    "rooms_per_100m2",
+    "bathrooms_per_room",
+    "log_size",
+    "log_num_photos",
+    "description_length",
+    "has_lift",
+    "has_lift_missing",
+    "is_exterior",
+    "is_exterior_missing",
+    "has_parking",
+    "has_parking_missing",
+    "parking_included",
+    "parking_included_missing",
+    "new_development_finished",
+    "new_development_finished_missing",
+    "has_price_drop",
+    "has_luxury_keywords",
+    "has_renovation_keywords",
+    "has_investment_keywords",
+    "floor_missing"
+  ],
+  "categorical_features": [
+    "propertyType",
+    "district",
+    "neighborhood",
+    "municipality",
+    "detailedType_typology",
+    "detailedType_subTypology"
+  ],
+  "models": [
+    "Ridge Regression",
+    "Random Forest Regressor",
+    "Gradient Boosting Regressor"
+  ],
+  "evaluation_protocol": {
+    "train_test_split": "80/20",
+    "random_state": 42,
+    "cross_validation": "5-fold KFold on training set",
+    "main_metric": "MAE",
+    "secondary_metrics": [
+      "RMSE",
+      "R2"
+    ]
+  },
+  "best_model": "Gradient Boosting Regressor",
+  "best_model_path": "..\\models\\best_model_latest.pkl",
+  "metrics_path": "..\\reports\\model_metrics_latest.csv",
+  "predictions_path": "..\\data\\processed\\model_predictions_latest.csv"
+}
