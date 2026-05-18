@@ -1,0 +1,2 @@
+﻿model_key,model_name,model_path,mae,rmse,r2
+best_model,Gradient Boosting Regressor,C:\Users\hugol\Desktop\Python\B2\ml-poc-project\models\best_model_latest.pkl,462609.49387603,690149.4839031997,0.8201945822664145

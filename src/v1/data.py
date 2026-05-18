@@ -1,14 +1,8 @@
 """
 src/data.py
 
-Data loading, cleaning and feature engineering utilities for the
+Reusable data loading, cleaning and feature engineering utilities for the
 Idealista Investment Opportunity Detector project.
-
-This file is compatible with the professor's scripts/main.py, which expects:
-
-    load_dataset_split() -> (X_train, X_test, y_train, y_test)
-
-It also keeps reusable helper functions for cleaning and feature engineering.
 """
 
 from __future__ import annotations
@@ -19,105 +13,14 @@ from typing import Iterable, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
-
-# =============================================================================
-# Robust configuration loading
-# =============================================================================
-# scripts/main.py dynamically loads src/config.py and registers it as "config".
-# When this file is imported from notebooks or standalone scripts, the fallback
-# values below are used instead.
-
-try:
-    from config import (
-        PROJECT_ROOT,
-        MODEL_READY_DATASET,
-        TARGET_COLUMN,
-        TEST_SIZE,
-        RANDOM_STATE,
-    )
-except Exception:
-    PROJECT_ROOT = Path(__file__).resolve().parents[1]
-    MODEL_READY_DATASET = PROJECT_ROOT / "data" / "processed" / "idealista_model_ready_latest.csv"
-    TARGET_COLUMN = "price"
-    TEST_SIZE = 0.20
-    RANDOM_STATE = 42
-
-
-# =============================================================================
-# Main function required by scripts/main.py
-# =============================================================================
-
-def load_dataset_split():
-    """
-    Load the model-ready dataset and return exactly four values:
-
-        X_train, X_test, y_train, y_test
-
-    This function is required by scripts/main.py.
-
-    Returns
-    -------
-    tuple
-        X_train, X_test, y_train, y_test
-    """
-
-    dataset_path = Path(MODEL_READY_DATASET)
-
-    if not dataset_path.exists():
-        raise FileNotFoundError(
-            f"Model-ready dataset not found: {dataset_path}. "
-            "Run notebooks/03_feature_engineering.ipynb first."
-        )
-
-    df = pd.read_csv(dataset_path)
-
-    if TARGET_COLUMN not in df.columns:
-        raise ValueError(
-            f"Target column '{TARGET_COLUMN}' not found in dataset. "
-            f"Available columns: {df.columns.tolist()}"
-        )
-
-    X = df.drop(columns=[TARGET_COLUMN])
-    y = df[TARGET_COLUMN]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=TEST_SIZE,
-        random_state=RANDOM_STATE,
-    )
-
-    return X_train, X_test, y_train, y_test
-
-
-# =============================================================================
-# Generic loading helpers
-# =============================================================================
 
 def find_latest_file(directory: str | Path, pattern: str) -> Path:
-    """
-    Return the latest file matching a pattern inside a directory.
-
-    Parameters
-    ----------
-    directory : str | Path
-        Directory to search in.
-    pattern : str
-        Glob pattern, for example "idealista_raw_listings_*.csv".
-
-    Returns
-    -------
-    Path
-        Latest matching file.
-    """
+    """Return the latest file matching a pattern inside a directory."""
     directory = Path(directory)
     files = sorted(directory.glob(pattern))
-
     if not files:
         raise FileNotFoundError(f"No file matching {pattern!r} found in {directory}")
-
     return files[-1]
 
 
@@ -145,72 +48,39 @@ def load_latest_dataset(project_root: str | Path = ".") -> pd.DataFrame:
     return pd.read_csv(candidates[-1])
 
 
-def load_model_ready_dataset() -> pd.DataFrame:
-    """
-    Load the latest model-ready dataset from config.MODEL_READY_DATASET.
-    """
-    dataset_path = Path(MODEL_READY_DATASET)
-
-    if not dataset_path.exists():
-        raise FileNotFoundError(
-            f"Model-ready dataset not found: {dataset_path}. "
-            "Run notebooks/03_feature_engineering.ipynb first."
-        )
-
-    return pd.read_csv(dataset_path)
-
-
-# =============================================================================
-# Cleaning helpers
-# =============================================================================
-
 def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize column names for easier use in modeling code.
-
-    Example:
-        parkingSpace.hasParkingSpace -> parkingSpace_hasParkingSpace
-    """
+    """Normalize column names for easier use in modeling code."""
     out = df.copy()
     out.columns = [
-        str(col)
-        .strip()
-        .replace(".", "_")
-        .replace(" ", "_")
-        .replace("-", "_")
+        col.strip()
+           .replace(".", "_")
+           .replace(" ", "_")
+           .replace("-", "_")
         for col in out.columns
     ]
     return out
 
 
 def to_bool_series(series: pd.Series) -> pd.Series:
-    """
-    Convert mixed boolean/string/numeric values into booleans with NaN support.
-    """
+    """Convert mixed boolean/string/numeric values into booleans with NaN support."""
     true_values = {"true", "yes", "y", "1", "si", "sí"}
     false_values = {"false", "no", "n", "0"}
 
     def convert(value):
         if pd.isna(value):
             return np.nan
-
         if isinstance(value, bool):
             return value
-
         if isinstance(value, (int, float)) and not pd.isna(value):
             if value == 1:
                 return True
             if value == 0:
                 return False
-
         value_str = str(value).strip().lower()
-
         if value_str in true_values:
             return True
-
         if value_str in false_values:
             return False
-
         return np.nan
 
     return series.apply(convert)
@@ -219,7 +89,6 @@ def to_bool_series(series: pd.Series) -> pd.Series:
 def parse_floor_value(value) -> float:
     """
     Convert Idealista floor values into approximate numerical values.
-
     Examples:
     - bj / bajo / pb -> 0
     - ss / sotano / semisotano -> -1
@@ -232,15 +101,12 @@ def parse_floor_value(value) -> float:
 
     if value_str in {"bj", "bajo", "pb", "principal"}:
         return 0.0
-
     if value_str in {"ss", "sotano", "sótano", "semisotano", "semisótano"}:
         return -1.0
-
     if value_str in {"en", "entreplanta"}:
         return 0.5
 
     match = re.search(r"-?\d+", value_str)
-
     if match:
         return float(match.group(0))
 
@@ -248,53 +114,28 @@ def parse_floor_value(value) -> float:
 
 
 def safe_divide(a, b):
-    """
-    Vectorized safe division.
-    """
+    """Vectorized safe division."""
     return np.where((b != 0) & (~pd.isna(b)), a / b, np.nan)
 
 
-def find_first_existing_col(
-    df: pd.DataFrame,
-    candidates: Iterable[str],
-) -> Optional[str]:
-    """
-    Return the first column that exists in a DataFrame.
-    """
+def find_first_existing_col(df: pd.DataFrame, candidates: Iterable[str]) -> Optional[str]:
+    """Return the first column that exists in a DataFrame."""
     for col in candidates:
         if col in df.columns:
             return col
     return None
 
 
-# =============================================================================
-# Cleaning and feature engineering pipeline
-# =============================================================================
-
 def basic_cleaning(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Apply basic cleaning:
-    - normalize column names
-    - remove duplicated propertyCode rows
-    - convert important numerical columns
-    - convert boolean columns
-    - parse floor information
-    """
+    """Apply basic cleaning: column names, duplicates, data types."""
     out = normalize_column_names(df)
 
     if "propertyCode" in out.columns:
         out = out.drop_duplicates(subset=["propertyCode"], keep="first")
 
     numeric_cols = [
-        "price",
-        "size",
-        "rooms",
-        "bathrooms",
-        "latitude",
-        "longitude",
-        "distance",
-        "numPhotos",
-        "price_per_m2",
+        "price", "size", "rooms", "bathrooms", "latitude", "longitude",
+        "distance", "numPhotos", "price_per_m2"
     ]
 
     for col in numeric_cols:
@@ -322,12 +163,9 @@ def basic_cleaning(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create real estate features for analysis and modeling.
-    """
+    """Create real estate features for analysis and modeling."""
     out = df.copy()
 
-    # Boolean features + missingness indicators
     bool_mapping = {
         "hasLift": "has_lift",
         "exterior": "is_exterior",
@@ -341,7 +179,6 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
             out[f"{new_col}_missing"] = out[source_col].isna().astype(int)
             out[new_col] = out[source_col].fillna(False).astype(bool).astype(int)
 
-    # Core ratios
     if "price" in out.columns and "size" in out.columns:
         out["price_per_m2"] = safe_divide(out["price"], out["size"])
 
@@ -349,10 +186,10 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
         out["rooms_per_100m2"] = safe_divide(out["rooms"], out["size"]) * 100
 
     if "bathrooms" in out.columns and "rooms" in out.columns:
-        rooms_non_zero = out["rooms"].replace(0, np.nan)
-        out["bathrooms_per_room"] = safe_divide(out["bathrooms"], rooms_non_zero)
+        out["bathrooms_per_room"] = safe_divide(
+            out["bathrooms"], out["rooms"].replace(0, np.nan)
+        )
 
-    # Log features
     if "size" in out.columns:
         out["log_size"] = np.log1p(out["size"])
 
@@ -362,9 +199,6 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     if "numPhotos" in out.columns:
         out["log_num_photos"] = np.log1p(out["numPhotos"])
 
-    # Analytical location features
-    # Useful for EDA/scoring, but usually excluded from model inputs
-    # to avoid target leakage.
     if "district" in out.columns and "price_per_m2" in out.columns:
         out["district_median_price_per_m2"] = (
             out.groupby("district")["price_per_m2"].transform("median")
@@ -378,23 +212,9 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
             * 100
         )
 
-    if "neighborhood" in out.columns and "price_per_m2" in out.columns:
-        out["neighborhood_median_price_per_m2"] = (
-            out.groupby("neighborhood")["price_per_m2"].transform("median")
-        )
-        out["neighborhood_listing_count"] = (
-            out.groupby("neighborhood")["price_per_m2"].transform("count")
-        )
-
-    # Text features
     description_col = find_first_existing_col(
         out,
-        [
-            "description",
-            "propertyComment",
-            "suggestedTexts_subtitle",
-            "suggestedTexts_title",
-        ],
+        ["description", "propertyComment", "suggestedTexts_subtitle", "suggestedTexts_title"],
     )
 
     if description_col:
@@ -402,31 +222,14 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
         out["description_length"] = text.str.len()
 
         luxury_keywords = [
-            "lujo",
-            "exclusivo",
-            "premium",
-            "alto standing",
-            "vistas",
-            "ático",
-            "piscina",
-            "spa",
-            "domótica",
-            "diseño",
+            "lujo", "exclusivo", "premium", "alto standing", "vistas",
+            "ático", "piscina", "spa", "domótica", "diseño",
         ]
-
         renovation_keywords = [
-            "reformado",
-            "a reformar",
-            "reforma",
-            "renovado",
-            "rehabilitado",
+            "reformado", "a reformar", "reforma", "renovado", "rehabilitado",
         ]
-
         investment_keywords = [
-            "oportunidad",
-            "inversión",
-            "rentabilidad",
-            "inversor",
+            "oportunidad", "inversión", "rentabilidad", "inversor",
         ]
 
         out["has_luxury_keywords"] = text.apply(
@@ -444,33 +247,21 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
         out["has_renovation_keywords"] = 0
         out["has_investment_keywords"] = 0
 
-    # Price drop indicator
     out["has_price_drop"] = 0
-
     price_drop_cols = [
         "priceInfo_price_priceDropInfo_formerPrice",
         "priceInfo_price_priceDropInfo_priceDropValue",
         "priceInfo_price_priceDropInfo_priceDropPercentage",
     ]
-
-    available_price_drop_cols = [
-        col for col in price_drop_cols if col in out.columns
-    ]
-
+    available_price_drop_cols = [col for col in price_drop_cols if col in out.columns]
     if available_price_drop_cols:
-        out["has_price_drop"] = (
-            out[available_price_drop_cols].notna().any(axis=1).astype(int)
-        )
+        out["has_price_drop"] = out[available_price_drop_cols].notna().any(axis=1).astype(int)
 
     return out
 
 
 def filter_outliers(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Apply broad sanity filters for the premium Madrid dataset.
-
-    These thresholds are intentionally conservative to keep most luxury listings.
-    """
+    """Apply broad sanity filters for the premium Madrid dataset."""
     out = df.copy()
     filters = pd.Series(True, index=out.index)
 
@@ -500,40 +291,25 @@ def build_model_dataset(df: pd.DataFrame) -> pd.DataFrame:
     are intentionally excluded from model inputs to reduce target leakage.
     """
     out = df.copy()
-    target_col = TARGET_COLUMN
+
+    target_col = "price"
 
     candidate_feature_cols = [
-        # Numerical core features
-        "size",
-        "rooms",
-        "bathrooms",
-        "latitude",
-        "longitude",
-        "distance",
-        "numPhotos",
-        "floor_numeric",
-        "rooms_per_100m2",
-        "bathrooms_per_room",
-        "log_size",
-        "log_num_photos",
+        "size", "rooms", "bathrooms", "latitude", "longitude",
+        "distance", "numPhotos", "floor_numeric",
+        "rooms_per_100m2", "bathrooms_per_room",
+        "log_size", "log_num_photos",
         "description_length",
-        # Amenity flags
-        "has_lift",
-        "has_lift_missing",
-        "is_exterior",
-        "is_exterior_missing",
-        "has_parking",
-        "has_parking_missing",
-        "parking_included",
-        "parking_included_missing",
-        "new_development_finished",
-        "new_development_finished_missing",
+        "has_lift", "has_lift_missing",
+        "is_exterior", "is_exterior_missing",
+        "has_parking", "has_parking_missing",
+        "parking_included", "parking_included_missing",
+        "new_development_finished", "new_development_finished_missing",
         "has_price_drop",
         "has_luxury_keywords",
         "has_renovation_keywords",
         "has_investment_keywords",
         "floor_missing",
-        # Categorical features
         "propertyType",
         "district",
         "neighborhood",
@@ -543,22 +319,12 @@ def build_model_dataset(df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     feature_cols = [col for col in candidate_feature_cols if col in out.columns]
-
-    if target_col not in out.columns:
-        raise ValueError(f"Target column '{target_col}' not found in dataframe.")
-
     model_df = out[[target_col] + feature_cols].copy()
 
-    essential_cols = [
-        col for col in [target_col, "size", "rooms", "bathrooms"]
-        if col in model_df.columns
-    ]
+    essential_cols = [col for col in ["price", "size", "rooms", "bathrooms"] if col in model_df.columns]
     model_df = model_df.dropna(subset=essential_cols)
 
-    num_features = [
-        col for col in model_df.select_dtypes(include=[np.number]).columns
-        if col != target_col
-    ]
+    num_features = [col for col in model_df.select_dtypes(include=[np.number]).columns if col != target_col]
     cat_features = model_df.select_dtypes(exclude=[np.number]).columns.tolist()
 
     for col in num_features:
@@ -571,24 +337,9 @@ def build_model_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def prepare_model_ready_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Full cleaning and feature engineering pipeline.
-    """
+    """Full cleaning and feature engineering pipeline."""
     cleaned = basic_cleaning(df)
     featured = engineer_features(cleaned)
     filtered = filter_outliers(featured)
     model_df = build_model_dataset(filtered)
     return model_df
-
-
-# =============================================================================
-# Optional script usage
-# =============================================================================
-
-if __name__ == "__main__":
-    X_train, X_test, y_train, y_test = load_dataset_split()
-    print("Dataset split loaded successfully.")
-    print("X_train:", X_train.shape)
-    print("X_test:", X_test.shape)
-    print("y_train:", y_train.shape)
-    print("y_test:", y_test.shape)

@@ -1,41 +1,31 @@
+from __future__ import annotations
+
+import os
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 DATA_DIR = PROJECT_ROOT / "data"
-LOGS_DIR = PROJECT_ROOT / "logs"
+RAW_DATA_DIR = DATA_DIR / "raw"
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
 MODELS_DIR = PROJECT_ROOT / "models"
-NOTEBOOKS_DIR = PROJECT_ROOT / "notebooks"
-PLOTS_DIR = PROJECT_ROOT / "plots"
+REPORTS_DIR = PROJECT_ROOT / "reports"
 RESULTS_DIR = PROJECT_ROOT / "results"
-SCRIPTS_DIR = PROJECT_ROOT / "scripts"
-TESTS_DIR = PROJECT_ROOT / "tests"
-
-for dir in [
-    DATA_DIR,
-    LOGS_DIR,
-    MODELS_DIR,
-    NOTEBOOKS_DIR,
-    PLOTS_DIR,
-    RESULTS_DIR,
-    SCRIPTS_DIR,
-    TESTS_DIR,
-]:
-    dir.mkdir(exist_ok=True)
 
 ENV_FILE = PROJECT_ROOT / ".env"
-APP_ENTRYPOINT = PROJECT_ROOT / "src" / "app.py"
-MODEL_METRICS_FILE = RESULTS_DIR / "model_metrics.csv"
+APP_ENTRYPOINT =  SRC_DIR / "app.py"
 
-STREAMLIT_HOST = "localhost"
-STREAMLIT_PORT = 8501
+STREAMLIT_HOST = os.getenv("STREAMLIT_HOST", "localhost")
+STREAMLIT_PORT = int(os.getenv("STREAMLIT_PORT", "8501"))
 
-# Students must replace this example with their trained models.
-# Each entry must point to a serialized model saved as `.joblib`, `.pkl`, or `.pickle`.
 MODELS = {
-    "model_a": {
-        "name": "Model A",
-        "description": "A simple baseline model.",
-        "path": MODELS_DIR / "model_a.pkl",
-    },
+    "best_model": {
+        "name": "Gradient Boosting Regressor",
+        "path": MODELS_DIR / "best_model_latest.pkl",
+    }
 }
+
+MODEL_READY_DATASET = PROCESSED_DATA_DIR / "idealista_model_ready_latest.csv"
+TARGET_COLUMN = "price"
+RANDOM_STATE = 42
+TEST_SIZE = 0.20

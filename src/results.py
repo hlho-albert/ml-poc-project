@@ -1,17 +1,35 @@
-"""Helpers for saving evaluation results."""
-
 from __future__ import annotations
-
-from collections.abc import Iterable
 
 import pandas as pd
 
-from config import MODEL_METRICS_FILE
+try:
+    import config
+except ImportError:
+    from . import config  # type: ignore
 
 
-def write_metrics(rows: Iterable[dict[str, object]]) -> pd.DataFrame:
-    """Write model metrics to ``results/model_metrics.csv`` and return a DataFrame."""
+def write_metrics(rows: list[dict[str, object]]) -> pd.DataFrame:
+    """
+    Write model evaluation metrics to disk.
 
-    metrics_df = pd.DataFrame(rows)
-    metrics_df.to_csv(MODEL_METRICS_FILE, index=False)
-    return metrics_df
+    Main output expected by the professor's main.py:
+        results/model_metrics.csv
+
+    Additional copy:
+        reports/model_metrics_from_main.csv
+    """
+    if not rows:
+        raise ValueError("No metric rows were provided.")
+
+    df = pd.DataFrame(rows)
+
+    config.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    results_path = config.RESULTS_DIR / "model_metrics.csv"
+    reports_path = config.REPORTS_DIR / "model_metrics_from_main.csv"
+
+    df.to_csv(results_path, index=False, encoding="utf-8-sig")
+    df.to_csv(reports_path, index=False, encoding="utf-8-sig")
+
+    return df

@@ -1,38 +1,24 @@
-"""Helpers for loading serialized models."""
-
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
 from typing import Any
 
+import joblib
 
-def load_model(model_path: Path) -> Any:
-    """Load a serialized model from disk.
 
-    Supported formats are `.joblib`, `.pkl`, and `.pickle`.
+def load_model(path: Path) -> Any:
     """
+    Load a trained model or sklearn Pipeline from disk.
+    """
+    if not Path(path).exists():
+        raise FileNotFoundError(
+            f"Model file not found: {path}. "
+            "Run notebooks/04_model_training.ipynb first."
+        )
 
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model file does not exist: {model_path}")
+    return joblib.load(path)
 
-    suffix = model_path.suffix.lower()
 
-    if suffix == ".joblib":
-        try:
-            import joblib
-        except ImportError as exc:
-            raise ImportError(
-                "Loading `.joblib` files requires the `joblib` package. "
-                "Add it to requirements.txt if needed."
-            ) from exc
-
-        return joblib.load(model_path)
-
-    if suffix in {".pkl", ".pickle"}:
-        with model_path.open("rb") as file_handle:
-            return pickle.load(file_handle)
-
-    raise ValueError(
-        f"Unsupported model format for {model_path}. Use .joblib, .pkl, or .pickle."
-    )
+def save_model(model: Any, path: Path) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, path)
